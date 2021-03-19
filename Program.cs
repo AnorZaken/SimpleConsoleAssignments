@@ -1,39 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿// C#9 Top-level statements:
 
-public class RentalTime
+using ConsoleApp2;
+using ConsoleApp2.Assignments;
+
+var assignments = new Assignment[]
 {
-    public DateTime Start { get; private set; }
-    public DateTime End { get; private set; }
+    new A01_HelloWorld(),
+    new A02_NameAndAge(),
+    new A03_ColorChanger(),
+    new A04_TodaysDate(),
+    new A05_LargestValue(),
+    new A06_GuessingNumber(),
+    new A07_SaveToDisk(),
+};
 
-    public RentalTime(DateTime start, DateTime end)
-    {
-        this.Start = start;
-        this.End = end;
-    }
-}
-
-public static class CarRental
-{
-    public static bool CanScheduleAll(IEnumerable<RentalTime> unloadingTimes)
-    {
-        var orderByStart = unloadingTimes.OrderByDescending(rt => rt.Start);
-        bool b = orderByStart.Zip<RentalTime, RentalTime, bool>(orderByStart.Skip(1), (a, b) => a.End <= b.Start).All(true); // Vill vi ha End < Start eller End <= Start - frågan är lite otydlig...
-        return b;
-    }
-
-    public static void Main(string[] args)
-    {
-        var format = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat;
-
-        RentalTime[] unloadingTimes = new RentalTime[]
-        {
-            new RentalTime(DateTime.Parse("3/4/2019 19:00", format), DateTime.Parse("3/4/2019 20:30", format)),
-            new RentalTime(DateTime.Parse("3/4/2019 22:10", format), DateTime.Parse("3/4/2019 22:30", format)),
-            new RentalTime(DateTime.Parse("3/4/2019 20:30", format), DateTime.Parse("3/4/2019 22:00", format))
-        };
-
-        Console.WriteLine(CarRental.CanScheduleAll(unloadingTimes));
-    }
-}
+new AssignmentMenu(assignments).Run();
