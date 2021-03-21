@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleApp2.Assignments
+namespace ConsoleAssignments.Assignments
 {
     // First example implementation:
     sealed record A01_HelloWorld() : Assignment(1, "Hello World!")

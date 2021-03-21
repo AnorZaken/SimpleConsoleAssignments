@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 
-namespace ConsoleApp2
+namespace ConsoleAssignments
 {
     public record CursorPosition(int Left, int Top)
     {
@@ -17,7 +18,7 @@ namespace ConsoleApp2
 
 
     // eXtra helper methods for basic console fun
-    public static class ConsoleX
+    public static partial class ConsoleX
     {
         public static class Cursor
         {
@@ -165,6 +166,13 @@ namespace ConsoleApp2
                 }
             }
             while (true);
+        }
+
+        public record PromptInputEvent(string CurrentText, ConsoleKeyInfo LastInput, bool IsCurrentTextChange);
+
+        public static IEnumerable<PromptInputEvent> PromptInteractiveFiltered(string prompt = " > ", CharFilter? charFilter = null)
+        {
+            throw new NotImplementedException();
         }
     }
 }

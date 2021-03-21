@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleApp2.Assignments
+namespace ConsoleAssignments.Assignments
 {
     sealed record A02_NameAndAge() : Assignment(2, "Your Name and Age")
     {

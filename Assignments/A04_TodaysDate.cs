@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleApp2.Assignments
+namespace ConsoleAssignments.Assignments
 {
     record A04_TodaysDate() : Assignment(4, "Todays Date")
     {

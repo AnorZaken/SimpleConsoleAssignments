@@ -1,7 +1,7 @@
 ﻿// C#9 Top-level statements:
 
-using ConsoleApp2;
-using ConsoleApp2.Assignments;
+using ConsoleAssignments;
+using ConsoleAssignments.Assignments;
 
 var assignments = new Assignment[]
 {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleApp2.Assignments
+namespace ConsoleAssignments.Assignments
 {
     record A03_ColorChanger() : Assignment(3, "Color Changer")
     {

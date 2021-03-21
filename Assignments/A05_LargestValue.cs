@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleApp2.Assignments
+namespace ConsoleAssignments.Assignments
 {
     record A05_LargestValue() : Assignment(5, "Largest Value")
     {

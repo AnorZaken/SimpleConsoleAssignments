@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConsoleApp2.Assignments
+namespace ConsoleAssignments.Assignments
 {
     record A06_GuessingNumber() : Assignment(6, "Guess the Number")
     {

@@ -1,12 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace ConsoleApp2.Assignments
+namespace ConsoleAssignments.Assignments
 {
     record A07_SaveToDisk() : Assignment(7, "Save to Disk")
     {
+        internal static List<string> RecentFilePaths { get; } = new();
+
         protected override void Implementation()
         {
             const int MAX_ATTEMPTS = 10;
@@ -37,6 +40,7 @@ namespace ConsoleApp2.Assignments
             {
                 File.WriteAllText(filePath, text, Encoding.UTF8);
                 Console.WriteLine("Your text was saved to " + filePath);
+                RecentFilePaths.Add(filePath);
             }
             catch (Exception e)
             {
@@ -62,6 +66,8 @@ namespace ConsoleApp2.Assignments
                     Console.WriteLine(e.Message);
                 }
             }
+            
+            Console.WriteLine();
         }
 
         private static bool TryGetNewFileNameFunc(out string path, ref string? errorMsg)
