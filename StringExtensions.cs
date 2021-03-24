@@ -2,7 +2,7 @@
 
 namespace ConsoleAssignments
 {
-    static class StringExt
+    static class StringExtensions
     {
         public static string? Truncate(this string? value, int maxLength, string ellipsis = "...")
         {

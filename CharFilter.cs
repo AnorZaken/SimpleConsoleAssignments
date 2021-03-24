@@ -137,15 +137,22 @@ namespace ConsoleAssignments
                         .OrderBy(range => range.FromInclusive)
                         .Aggregate(seed, (list, next) =>
                         {
-                            var prev = list[^1];
-                            if ((prev.ToInclusive + 1) >= next.FromInclusive) // +1 covers the case where they are adjacent
+                            if (list.Count == 0)
                             {
-                                char max = next.ToInclusive >= prev.ToInclusive ? next.ToInclusive : prev.ToInclusive;
-                                list[^1] = prev with { ToInclusive = max };
+                                list.Add(next);
                             }
                             else
                             {
-                                list.Add(next); // no intersection between prev and next
+                                var prev = list[^1];
+                                if ((prev.ToInclusive + 1) >= next.FromInclusive) // +1 covers the case where they are adjacent
+                                {
+                                    char max = next.ToInclusive >= prev.ToInclusive ? next.ToInclusive : prev.ToInclusive;
+                                    list[^1] = prev with { ToInclusive = max };
+                                }
+                                else
+                                {
+                                    list.Add(next); // no intersection between prev and next
+                                }
                             }
                             return list;
                         });

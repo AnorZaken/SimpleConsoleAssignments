@@ -4,13 +4,13 @@ namespace ConsoleAssignments.Assignments
 {
     record A03_ColorChanger() : Assignment(3, "Color Changer")
     {
-        private ConsoleColorSet colorsDefault = ConsoleX.Colors.Current;
-        private ConsoleColorSet colorsAlternative = new ConsoleColorSet(ConsoleColor.DarkMagenta, ConsoleColor.White);
+        private CursorColors colorsDefault = ConsoleX.Cursor.Colors;
+        private CursorColors colorsAlternative = new CursorColors(ConsoleColor.White, ConsoleColor.DarkMagenta);
         private bool isToggled = false;
 
         protected override void WriteHeader()
         {
-            ConsoleX.Colors.Current = isToggled ? colorsDefault : colorsAlternative;
+            (isToggled ? colorsDefault : colorsAlternative).Apply();
             isToggled = !isToggled;
             base.WriteHeader();
         }

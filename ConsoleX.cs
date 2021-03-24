@@ -1,22 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Versioning;
 
 namespace ConsoleAssignments
 {
-    public record CursorPosition(int Left, int Top)
-    {
-        public CursorPosition() : this(Console.CursorLeft, Console.CursorTop) { }
-        public void Restore() => (Console.CursorLeft, Console.CursorTop) = (Left, Top);
-        public static implicit operator CursorPosition((int left, int top) tuple) => new(tuple.left, tuple.top);
-    }
-
-    public record ConsoleColorSet(ConsoleColor Background, ConsoleColor Foreground)
-    {
-        public ConsoleColorSet() : this(Console.BackgroundColor, Console.ForegroundColor) { }
-        public void Restore() => (Console.BackgroundColor, Console.ForegroundColor) = (Background, Foreground);
-    }
-
-
     // eXtra helper methods for basic console fun
     public static partial class ConsoleX
     {
@@ -27,18 +14,62 @@ namespace ConsoleAssignments
             public static CursorPosition Position
             {
                 get => new();
-                set => value.Restore();
+                set => value.Apply();
             }
-        }
-
-        public static class Colors
-        {
-            public static ConsoleColor Foreground => Console.ForegroundColor;
-            public static ConsoleColor Background => Console.BackgroundColor;
-            public static ConsoleColorSet Current
+            public static ConsoleColor ForeColor => Console.ForegroundColor;
+            public static ConsoleColor BackColor => Console.BackgroundColor;
+            public static CursorColors Colors
             {
                 get => new();
-                set => value.Restore();
+                set => value.Apply();
+            }
+
+            public static bool TryGetVisibility(out bool isVisible)
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    isVisible = Console.CursorVisible;
+                    return true;
+                }
+                isVisible = true;
+                return false;
+            }
+            public static bool TrySetVisibility(bool isVisible)
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    Console.CursorVisible = isVisible;
+                    return true;
+                }
+                return false;
+            }
+
+            public static CursorState State
+            {
+                get => new();
+                set => value.Apply();
+            }
+            public static CursorPosition MoveForwards(int padLeft = 0, int padRight = 0) => Position.GetRelativeMove(+1, padLeft, padRight).Apply();
+            public static CursorPosition MoveBackwards(int padLeft = 0, int padRight = 0) => Position.GetRelativeMove(-1, padLeft, padRight).Apply();
+        }
+
+        public static class View // System.Console calls this Window, but I find that confusing...
+        {
+            public static int Left => Console.WindowLeft;
+            public static int Top => Console.WindowTop;
+            public static int Width => Console.WindowWidth;
+            public static int Height => Console.WindowHeight;
+            public static ViewArea Area
+            {
+                get => new();
+                [SupportedOSPlatform("windows")]
+                set => value.Apply();
+            }
+            public static ViewPosition Position
+            {
+                get => new();
+                [SupportedOSPlatform("windows")]
+                set => value.Apply();
             }
         }
 
@@ -49,7 +80,7 @@ namespace ConsoleAssignments
             var pos = Cursor.Position;
             Cursor.Position = (0, row);
             Console.Write(EmptyLine);
-            pos.Restore();
+            pos.Apply();
         }
 
         public static void ClearRows(int startRow, int lastRow)
@@ -61,7 +92,7 @@ namespace ConsoleAssignments
                 Cursor.Position = (0, row);
                 Console.Write(emptyLine);
             }
-            pos.Restore();
+            pos.Apply();
         }
 
         public static void PressAnyKey(string message = "Press any key...")
@@ -78,6 +109,17 @@ namespace ConsoleAssignments
             Console.Write(new string(lineChar, Console.WindowWidth));
             Cursor.Position = (0, newTop);
         }
+
+        //[SupportedOSPlatform("windows")]
+        //public static void WriteAtPosition(CursorPosition position, dynamic value)
+        //{
+        //    var oldView = View.Position;
+        //    var oldCursor = Cursor.Position;
+        //    position.Apply();
+        //    Console.Write(value);
+        //    oldView.Apply();
+        //    oldCursor.Apply();
+        //}
 
         public static bool TryReadNumber(out int number, out string? input)
         {
@@ -111,7 +153,7 @@ namespace ConsoleAssignments
                     return true; // <--
                 }
                 ClearRows(errPos.Top, Console.CursorTop);
-                errPos.Restore();
+                errPos.Apply();
             }
             while (--maxAttempts > 0);
 
@@ -168,11 +210,92 @@ namespace ConsoleAssignments
             while (true);
         }
 
-        public record PromptInputEvent(string CurrentText, ConsoleKeyInfo LastInput, bool IsCurrentTextChange);
-
-        public static IEnumerable<PromptInputEvent> PromptInteractiveFiltered(string prompt = " > ", CharFilter? charFilter = null)
+        public static IEnumerable<PromptUpdate> PromptAdvanced(CharFilter? charFilter = null, int maxLength = 255, int padLeft = -1, int padRight = 0)
         {
-            throw new NotImplementedException();
+            var pos = Cursor.Position;
+            if (padLeft == -1)
+                padLeft = pos.Left;
+            else if (padLeft > pos.Left)
+            {
+                pos = pos with { Left = padLeft };
+                pos.Apply();
+            }
+            CharFilter filter = charFilter ?? CharFilter.All;
+
+            PromptUpdate update;
+            string text = "";
+            do
+            {
+                pos.Apply();
+                var keyInfo = Console.ReadKey(true);
+                bool hasModifiersOtherThanShift = (keyInfo.Modifiers & ~ConsoleModifiers.Shift) != 0;
+                update = hasModifiersOtherThanShift
+                    ? new PromptUpdate(text, text, pos, keyInfo, PromptUpdateCause.InputHasModifier)
+                    : char.IsControl(keyInfo.KeyChar)
+                        ? keyInfo.Key switch
+                        {
+                            ConsoleKey.Escape => EscapeHelper(keyInfo),
+                            ConsoleKey.Enter => EnterHelper(keyInfo),
+                            ConsoleKey.Backspace => BackspaceHelper(keyInfo),
+                            _ => new(text, pos, keyInfo, PromptUpdateCause.InputNonPrintable),
+                        }
+                        : TextInputHelper(keyInfo);
+                yield return update;
+            }
+            while (!update.IsFinalUpdate);
+
+            PromptUpdate EscapeHelper(ConsoleKeyInfo keyInfo) => new(text, pos, keyInfo, PromptUpdateCause.Escape);
+            PromptUpdate EnterHelper(ConsoleKeyInfo keyInfo) => new(text, pos, keyInfo, PromptUpdateCause.Enter);
+            PromptUpdate BackspaceHelper(ConsoleKeyInfo keyInfo)
+            {
+                if (text.Length == 0)
+                    return new(text, pos, keyInfo, PromptUpdateCause.BackspaceOnEmpty);
+                string oldText = text;
+                text = text[..^1];
+                //pos.Apply();
+                pos = TextEdit.Backspace(padLeft, padRight);
+                return new(text, oldText, pos, keyInfo, PromptUpdateCause.Backspace);
+            }
+            PromptUpdate TextInputHelper(ConsoleKeyInfo keyInfo)
+            {
+                if (!filter.IsValid(keyInfo.KeyChar))
+                    return new(text, pos, keyInfo, PromptUpdateCause.InputRejectedByFilter);
+                if (text.Length >= maxLength)
+                    return new(text, pos, keyInfo, PromptUpdateCause.TextMaxLength);
+                return InputAppendedHelper(keyInfo);
+            }
+            PromptUpdate InputAppendedHelper(ConsoleKeyInfo keyInfo)
+            {
+                string oldText = text;
+                text += keyInfo.KeyChar;
+                //pos.Apply();
+                pos = TextEdit.Write(keyInfo.KeyChar, padLeft, padRight);
+                return new(text, oldText, pos, keyInfo, PromptUpdateCause.InputAppended);
+            }
+        }
+
+        public static class TextEdit
+        {
+            public static CursorPosition Backspace(int padLeft = 0, int padRight = 0)
+            {
+                var pos = Cursor.MoveBackwards(padLeft, padRight);
+                Console.Write(' ');
+                return pos.Apply();
+            }
+
+            public static CursorPosition Write(char value, int padLeft = 0, int padRight = 0)
+            {
+                var pos = Cursor.Position.GetRelativeMove(1, padLeft, padRight);
+                Console.Write(value);
+                return pos.Apply();
+            }
+
+            public static CursorPosition Write(string value, int padLeft = 0, int padRight = 0) // extremely unoptimized
+            {
+                foreach (char c in value)
+                    Write(c, padLeft, padRight);
+                return Cursor.Position;
+            }
         }
     }
 }
