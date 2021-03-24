@@ -274,6 +274,65 @@ namespace ConsoleAssignments
             }
         }
 
+        public delegate void PreValidationProcessing(ref string fileName);
+        public delegate bool ValidateFileNameAndGetPath(string fileName, out string filePath, out string? errorMsg);
+
+        // Assumes that the current cursor position when called is the errorMessage position.
+        public static string PromptFilename(out string filePath, ValidateFileNameAndGetPath validateAndGetPath, PreValidationProcessing? preValidationProcessing = null, int maxLength = 255)
+        {
+            CursorState? errCursor = Cursor.State with { Colors = (ConsoleColor.Red, ConsoleColor.Black), IsVisible = false };
+            Console.WriteLine();
+            string fileName;
+            string? errorMsg = null;
+            do
+            {
+                ClearRows(errCursor.Top, Cursor.Top); // Clears previous error AND input.
+                PrintError(errorMsg); // Prints errors from ValidateFileName
+                Console.Write(" > ");
+
+                fileName = string.Empty;
+                foreach (var update in PromptAdvanced(charFilter: CharFilter.FileName, maxLength: maxLength)) // <- ReadKey inside
+                {
+                    ClearRows(errCursor.Top, update.CursorPosition.Top - 1); // Clears previous error.
+
+                    switch (update.Cause)
+                    {
+                        case PromptUpdateCause.Backspace:
+                        case PromptUpdateCause.BackspaceOnEmpty:
+                        case PromptUpdateCause.InputAppended:
+                        case PromptUpdateCause.InputHasModifier:
+                        case PromptUpdateCause.InputNonPrintable:
+                            continue;
+                        case PromptUpdateCause.Escape:
+                            filePath = string.Empty; // Cancel by specifying empty path.
+                            return string.Empty; // <--
+                        case PromptUpdateCause.Enter:
+                            fileName = update.Text;
+                            continue;
+                        case PromptUpdateCause.InputRejectedByFilter:
+                            PrintError("Invalid filename character!");
+                            break;
+                        case PromptUpdateCause.TextMaxLength:
+                            PrintError("Filename too long...");
+                            break;
+                    }
+                }
+                if (preValidationProcessing != null)
+                    preValidationProcessing(ref fileName);
+            }
+            while (!validateAndGetPath(fileName, out filePath, out errorMsg));
+            return fileName;
+
+            void PrintError(string? errorMsg)
+            {
+                var colors = Cursor.Colors;
+                errCursor.Apply();
+                Console.WriteLine(errorMsg);
+                colors.Apply();
+                Cursor.TrySetVisibility(true);
+            }
+        }
+
         public static class TextEdit
         {
             public static CursorPosition Backspace(int padLeft = 0, int padRight = 0)
