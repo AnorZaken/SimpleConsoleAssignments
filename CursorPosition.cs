@@ -12,11 +12,11 @@ namespace ConsoleAssignments
             return this;
         }
 
-        public CursorPosition GetRelativeMove(int relativeMove, int leftPadding = 0, int rightPadding = 0)
-            => CalculateRelativeMove(relativeMove, out _, leftPadding, rightPadding);
+        public CursorPosition GetRelativePosition(int relativeMove, int leftPadding = 0, int rightPadding = 0)
+            => GetRelativePosition(relativeMove, out _, leftPadding, rightPadding);
 
         // if it's not possible to move the full requested distance, actualMove will diff from relativeMove.
-        public CursorPosition CalculateRelativeMove(int relativeMove, out int actualMove, int leftPadding = 0, int rightPadding = 0)
+        public CursorPosition GetRelativePosition(int relativeMove, out int actualMove, int leftPadding = 0, int rightPadding = 0)
         {
             int maxX = Console.BufferWidth - rightPadding;
             int oldX = Left - leftPadding;
@@ -39,6 +39,26 @@ namespace ConsoleAssignments
                 actualMove = relativeMove;
                 return new CursorPosition(newX, newY);
             }
+        }
+
+        public CursorPosition Backspace(out CursorPosition newPosition, bool applyNewPosition = false, int padLeft = 0, int padRight = 0)
+        {
+            CursorPosition oldPosition = new();
+            newPosition = GetRelativePosition(-1, padLeft, padRight);
+            newPosition.Apply();
+            Console.Write(' ');
+            (applyNewPosition ? newPosition : oldPosition).Apply();
+            return newPosition;
+        }
+
+        public CursorPosition Write(char value, out CursorPosition newPosition, bool applyNewPosition = false, int padLeft = 0, int padRight = 0)
+        {
+            CursorPosition oldPosition = new();
+            newPosition = GetRelativePosition(+1, padLeft, padRight);
+            Apply();
+            Console.Write(value);
+            (applyNewPosition ? newPosition : oldPosition).Apply();
+            return newPosition;
         }
 
         public static implicit operator CursorPosition((int Left, int Top) tuple) => new(tuple.Left, tuple.Top);

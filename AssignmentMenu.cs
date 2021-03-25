@@ -16,7 +16,7 @@ namespace ConsoleAssignments
                 Console.Clear();
                 WriteHeader();
                 WriteAssignments();
-                ConsoleX.TryAsk("", TryReadIndexFunc, out int index);
+                ConsoleX.TryAsk("Select assignment(enter number):", TryReadIndexFunc, out int index);
                 
                 if (index == -1) 
                     break; // Exit
@@ -42,7 +42,7 @@ namespace ConsoleAssignments
             Console.WriteLine(" - 00 : Exit ");
         }
 
-        private bool TryReadIndexFunc(out int index, ref string? errorMsg)
+        private bool TryReadIndexFunc(out int index, ref string? errorMsg, string prompt)
         {
             bool TryFindAssignmentIndex(int assignmentNumber, out int index)
             {
@@ -51,13 +51,14 @@ namespace ConsoleAssignments
             }
 
             index = -1;
-            if (ConsoleX.TryReadNumber("Select assignment (enter number) > ", out int number, ref errorMsg, out _))
+            if (ConsoleX.TryReadNumber(out int? number, ref errorMsg, prompt, allowEscCancel: true))
             {
-                if (number == 0 /* Exit */ || TryFindAssignmentIndex(number, out index))
+                if (number == 0 /* Exit */ || TryFindAssignmentIndex(number.Value, out index))
                     return true;
                 errorMsg = $"No such assignment number found ({number})!";
+                return false;
             }
-            return false;
+            return number is null;
         }
     }
 }

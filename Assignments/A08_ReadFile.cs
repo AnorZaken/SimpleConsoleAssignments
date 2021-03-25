@@ -5,7 +5,7 @@ namespace ConsoleAssignments.Assignments
 {
     record A08_ReadFile() : Assignment(8, "Read File")
     {
-        protected override void Implementation()
+        protected override void Implementation() // TODO: a file-prompt for using whatever file you want.
         {
             Console.WriteLine("This assignment is about reading (text) files.");
             do
@@ -19,7 +19,7 @@ namespace ConsoleAssignments.Assignments
                 
                 string fileName = Path.GetFileName(filePath);
                 Console.Write($"Do you want to open file {fileName} from Assignment-07? ");
-                if (!ConsoleX.PromptYesNo(defaultValue: true))
+                if (ConsoleX.PromptYesNo(defaultValue: true) != true)
                     return;
 
                 string fileContent;

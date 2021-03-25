@@ -2,15 +2,15 @@
 
 namespace ConsoleAssignments.Assignments
 {
-    sealed record A02_NameAndAge() : Assignment(2, "Your Name and Age")
+    sealed record A02_NameAndAge() : Assignment(2, "Name and Age")
     {
         private record Names(string First, string Last);
 
         protected override void Implementation()
         {
-            static bool TryReadNameFunc(out Names name, ref string? errorMsg)
+            static bool TryReadNameFunc(out Names name, ref string? errorMsg, string prompt)
             {
-                Console.Write(" > ");
+                Console.Write(prompt);
 
                 var words = Console.ReadLine()?.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
 
@@ -27,10 +27,14 @@ namespace ConsoleAssignments.Assignments
                 }
             }
 
-            static bool TryReadAgeFunc(out int age, ref string? errorMsg)
+            static bool TryReadAgeFunc(out int age, ref string? errorMsg, string prompt)
             {
-                if (!ConsoleX.TryReadNumber(" > ", out age, ref errorMsg, out _))
+                if (!ConsoleX.TryReadNumber(out int? ageNull, ref errorMsg, prompt))
+                {
+                    age = 0;
                     return false;
+                }
+                age = ageNull.Value;
                 if (age >= 0)
                     return true;
                 errorMsg = $"Age cannot be negative ({age})!";
@@ -46,6 +50,9 @@ namespace ConsoleAssignments.Assignments
                 return;
             Console.WriteLine();
 
+            Console.WriteLine();
+            Console.WriteLine(" This is your entered data:");
+            Console.WriteLine("----------------------------");
             Console.WriteLine(" FirstName:  " + names.First);
             Console.WriteLine("  LastName:  " + names.Last);
             Console.WriteLine(" Age (yrs):  " + age);

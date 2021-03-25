@@ -1,77 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.Versioning;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ConsoleAssignments
 {
     // eXtra helper methods for basic console fun
     public static partial class ConsoleX
     {
-        public static class Cursor
-        {
-            public static int Left => Console.CursorLeft;
-            public static int Top => Console.CursorTop;
-            public static CursorPosition Position
-            {
-                get => new();
-                set => value.Apply();
-            }
-            public static ConsoleColor ForeColor => Console.ForegroundColor;
-            public static ConsoleColor BackColor => Console.BackgroundColor;
-            public static CursorColors Colors
-            {
-                get => new();
-                set => value.Apply();
-            }
-
-            public static bool TryGetVisibility(out bool isVisible)
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    isVisible = Console.CursorVisible;
-                    return true;
-                }
-                isVisible = true;
-                return false;
-            }
-            public static bool TrySetVisibility(bool isVisible)
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    Console.CursorVisible = isVisible;
-                    return true;
-                }
-                return false;
-            }
-
-            public static CursorState State
-            {
-                get => new();
-                set => value.Apply();
-            }
-            public static CursorPosition MoveForwards(int padLeft = 0, int padRight = 0) => Position.GetRelativeMove(+1, padLeft, padRight).Apply();
-            public static CursorPosition MoveBackwards(int padLeft = 0, int padRight = 0) => Position.GetRelativeMove(-1, padLeft, padRight).Apply();
-        }
-
-        public static class View // System.Console calls this Window, but I find that confusing...
-        {
-            public static int Left => Console.WindowLeft;
-            public static int Top => Console.WindowTop;
-            public static int Width => Console.WindowWidth;
-            public static int Height => Console.WindowHeight;
-            public static ViewArea Area
-            {
-                get => new();
-                [SupportedOSPlatform("windows")]
-                set => value.Apply();
-            }
-            public static ViewPosition Position
-            {
-                get => new();
-                [SupportedOSPlatform("windows")]
-                set => value.Apply();
-            }
-        }
+        private const string DEFAULT_PROMPT = " > ";
 
         public static string EmptyLine => new(' ', Console.BufferWidth);
 
@@ -83,11 +19,12 @@ namespace ConsoleAssignments
             pos.Apply();
         }
 
-        public static void ClearRows(int startRow, int lastRow)
+        public static void ClearRows(int firstRow, int lastRow) // both values are inclusive
         {
             var pos = Cursor.Position;
             string emptyLine = EmptyLine;
-            for (int row = startRow; row <= lastRow; ++row)
+            int diffSign = (lastRow - firstRow) >> 31 | 1; // makes argument order irrelevant (-1 or +1)
+            for (int row = firstRow; row <= lastRow; row += diffSign)
             {
                 Cursor.Position = (0, row);
                 Console.Write(emptyLine);
@@ -95,50 +32,92 @@ namespace ConsoleAssignments
             pos.Apply();
         }
 
-        public static void PressAnyKey(string message = "Press any key...")
+
+        public static ConsoleKeyInfo PressAnyKey(string message = "Press any key...")
         {
             Console.Write(message);
-            Console.ReadKey(true);
+            return Console.ReadKey(true);
         }
 
-        public static void WriteDividerLine(char lineChar = '=', int emptyRowsAfter = 1)
+
+        public static void WriteDividerLine(char lineChar = '=', int emptyRowsAfter = 1) // Issue: Can cause horizontally View movement if View.Width < Buffer.Width
         {
-            if (Cursor.Left != 0) // ensure we always start on a new line
+            // ensure cursor is at the start of a line
+            if (Cursor.Left != 0)
                 Console.WriteLine();
-            int newTop = Cursor.Top + emptyRowsAfter + 1; // ensure we move the correct number of lines
+
+            // newTop ensures that the cursor moves the correct number of lines
+            int newTop = Console.CursorTop + emptyRowsAfter + 1;
             Console.Write(new string(lineChar, Console.WindowWidth));
             Cursor.Position = (0, newTop);
         }
 
-        //[SupportedOSPlatform("windows")]
-        //public static void WriteAtPosition(CursorPosition position, dynamic value)
-        //{
-        //    var oldView = View.Position;
-        //    var oldCursor = Cursor.Position;
-        //    position.Apply();
-        //    Console.Write(value);
-        //    oldView.Apply();
-        //    oldCursor.Apply();
-        //}
+        // supports cancel with ESC (that's why the number type is nullable: If (return: false AND number is null) then ESC cancel occurred)
+        public static bool TryReadNumber([NotNullWhen(true)] out int? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
+            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
+        public static bool TryReadNumber([NotNullWhen(true)] out float? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
+            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
+        public static bool TryReadNumber([NotNullWhen(true)] out decimal? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
+            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
+        public static bool TryReadNumber([NotNullWhen(true)] out double? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
+            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
 
-        public static bool TryReadNumber(out int number, out string? input)
-        {
-            input = Console.ReadLine();
-            return int.TryParse(input, out number);
-        }
-
-        public static bool TryReadNumber(string prompt, out int number, ref string? errorMsg, out string? input)
+        private delegate bool TryParseFunc<T>(string? input, out T output) where T : notnull;
+        private static bool TryReadNumber<T>(TryParseFunc<T> tryParseFunc, [NotNullWhen(true)] out T? number, ref string? errorMsg, string prompt, bool allowEscCancel)
+            where T : struct // could also constrain to: "notnull, new()"
         {
             Console.Write(prompt);
-            if (TryReadNumber(out number, out input))
-                return true;
-            errorMsg = $"Make sure the input is a number (\"{input.Truncate(12)}\")!";
-            return false;
+            bool success = TryReadNumber(tryParseFunc, out number, out string? input, allowEscCancel);
+            if (success == false && number != null)
+                errorMsg = $"Make sure the input is a number (\"{input.Truncate(12)}\")!";
+            return success;
+
+            static bool TryReadNumber(TryParseFunc<T> tryParseFunc, [NotNullWhen(true)] out T? number, out string? input, bool allowEscCancel)
+            {
+                input = "";
+                ConsoleKeyInfo keyInfo;
+                do
+                {
+                    keyInfo = Console.ReadKey(true);
+                    switch (keyInfo.Key)
+                    {
+                        case ConsoleKey.Escape:
+                            if (allowEscCancel)
+                            {
+                                number = null;
+                                return false;
+                            }
+                            break;
+                        case ConsoleKey.Backspace:
+                            if (input.Length > 0)
+                            {
+                                input = input[..^1];
+                                //Console.Write(keyInfo.KeyChar); // writing a backspace just moves the cursor, it doesn't erase any buffer content.
+                                Cursor.Backspace();
+                            }
+                            break;
+                        case ConsoleKey.Enter:
+                            break;
+                        default:
+                            if (!keyInfo.HasModifiersOtherThanShift() && !keyInfo.IsAControlChar())
+                            {
+                                input += keyInfo.KeyChar;
+                                Console.Write(keyInfo.KeyChar);
+                            }
+                            break;
+                    }
+                } while (keyInfo.Key != ConsoleKey.Enter);
+
+                bool success = tryParseFunc(input, out T num);
+                number = num;
+                return success;
+            }
         }
 
-        public delegate bool TryReadFunc<T>(out T value, ref string? errorMsg);
+        public delegate bool TryReadFunc<T>(out T value, ref string? errorMsg, string prompt);
 
-        public static bool TryRead<T>(TryReadFunc<T> attemptFunc, out T value, int maxAttempts = 5)
+        // A wrapper around a TryReadFunc that handles errorMsg output, and allows specifying maxAttempts.
+        public static bool TryReadWithError<T>(TryReadFunc<T> tryReadFunc, out T value, string prompt = DEFAULT_PROMPT, int maxAttempts = 8)
         {
             var errPos = Cursor.Position;
             string? errorMsg = null;
@@ -146,7 +125,7 @@ namespace ConsoleAssignments
             {
                 if (errorMsg != null)
                     Console.WriteLine(errorMsg);
-                if (attemptFunc(out value, ref errorMsg))
+                if (tryReadFunc(out value, ref errorMsg, prompt))
                 {
                     if (errorMsg != null)
                         ClearRow(errPos.Top);
@@ -161,57 +140,64 @@ namespace ConsoleAssignments
             return false;
         }
 
-        public static bool TryAsk<T>(string question, TryReadFunc<T> attemptFunc, out T value, int maxAttempts = 5)
+        public static bool TryAsk<T>(string question, TryReadFunc<T> attemptFunc, out T value, string prompt = DEFAULT_PROMPT, int maxAttempts = 8)
         {
             Console.WriteLine(question);
-            if (TryRead(attemptFunc, out value, maxAttempts))
+            if (TryReadWithError(attemptFunc, out value, prompt, maxAttempts))
                 return true;
-            PressAnyKey();
+            //PressAnyKey();
             return false;
         }
 
-        public static string? PromptRead(string prompt = " > ")
+        public static string? PromptLine(string prompt = " > ")
         {
             Console.Write(prompt);
             return Console.ReadLine();
         }
 
-        public static bool PromptYesNo(string prompt = "(y/n): ", bool? defaultValue = null)
+        public static bool? PromptYesNo(string prompt = "(y/n): ", bool? defaultValue = null, bool allowEscapeCancel = false)
         {
             Console.Write(prompt);
-            if (defaultValue is true)
-            {
-                Console.Write('Y');
-                Console.CursorLeft--;
-            }
-            else if (defaultValue is false)
-            {
-                Console.Write('N');
-                Console.CursorLeft--;
-            }
+            var pos = Cursor.Position;
+            bool? value = PrintValue(defaultValue);
             do
             {
                 var key = Console.ReadKey(true);
-                if (key.Key is ConsoleKey.Enter && defaultValue != null)
+                switch (key.Key)
                 {
-                    return defaultValue.Value;
-                }
-                if (key.Key is ConsoleKey.Y)
-                {
-                    Console.Write('Y');
-                    return true;
-                }
-                if (key.Key is ConsoleKey.N or ConsoleKey.Escape)
-                {
-                    Console.Write('N');
-                    return false;
+                    case ConsoleKey.Escape:
+                        if (!allowEscapeCancel)
+                            goto case ConsoleKey.N;
+                        value = PrintValue(null);
+                        return null;
+                    case ConsoleKey.Enter:
+                        if (value != null)
+                            return value;
+                        break;
+                    case ConsoleKey.Y:
+                        value = PrintValue(true);
+                        break;
+                    case ConsoleKey.N:
+                        value = PrintValue(false);
+                        break;
                 }
             }
             while (true);
+
+            bool? PrintValue(bool? value)
+            {
+                pos.Apply();
+                Console.Write(value == null ? '-' : value.Value ? 'Y' : 'N');
+                pos.Apply();
+                return value;
+            }
         }
 
-        public static IEnumerable<PromptUpdate> PromptAdvanced(CharFilter? charFilter = null, int maxLength = 255, int padLeft = -1, int padRight = 0)
+        public static IEnumerable<PromptUpdate> PromptAdvanced(CharFilter? charFilter = null, string prompt = DEFAULT_PROMPT, int maxLength = 255, int padLeft = -1, int padRight = 0)
         {
+            charFilter ??= CharFilter.All;
+
+            Console.Write(prompt);
             var pos = Cursor.Position;
             if (padLeft == -1)
                 padLeft = pos.Left;
@@ -220,7 +206,6 @@ namespace ConsoleAssignments
                 pos = pos with { Left = padLeft };
                 pos.Apply();
             }
-            CharFilter filter = charFilter ?? CharFilter.All;
 
             PromptUpdate update;
             string text = "";
@@ -228,10 +213,9 @@ namespace ConsoleAssignments
             {
                 pos.Apply();
                 var keyInfo = Console.ReadKey(true);
-                bool hasModifiersOtherThanShift = (keyInfo.Modifiers & ~ConsoleModifiers.Shift) != 0;
-                update = hasModifiersOtherThanShift
+                update = keyInfo.HasModifiersOtherThanShift()
                     ? new PromptUpdate(text, text, pos, keyInfo, PromptUpdateCause.InputHasModifier)
-                    : char.IsControl(keyInfo.KeyChar)
+                    : keyInfo.IsAControlChar()
                         ? keyInfo.Key switch
                         {
                             ConsoleKey.Escape => EscapeHelper(keyInfo),
@@ -253,12 +237,12 @@ namespace ConsoleAssignments
                 string oldText = text;
                 text = text[..^1];
                 //pos.Apply();
-                pos = TextEdit.Backspace(padLeft, padRight);
+                pos = Cursor.Backspace(padLeft, padRight);
                 return new(text, oldText, pos, keyInfo, PromptUpdateCause.Backspace);
             }
             PromptUpdate TextInputHelper(ConsoleKeyInfo keyInfo)
             {
-                if (!filter.IsValid(keyInfo.KeyChar))
+                if (!charFilter.IsValid(keyInfo.KeyChar))
                     return new(text, pos, keyInfo, PromptUpdateCause.InputRejectedByFilter);
                 if (text.Length >= maxLength)
                     return new(text, pos, keyInfo, PromptUpdateCause.TextMaxLength);
@@ -269,7 +253,7 @@ namespace ConsoleAssignments
                 string oldText = text;
                 text += keyInfo.KeyChar;
                 //pos.Apply();
-                pos = TextEdit.Write(keyInfo.KeyChar, padLeft, padRight);
+                pos = Cursor.Write(keyInfo.KeyChar, padLeft, padRight);
                 return new(text, oldText, pos, keyInfo, PromptUpdateCause.InputAppended);
             }
         }
@@ -278,7 +262,7 @@ namespace ConsoleAssignments
         public delegate bool ValidateFileNameAndGetPath(string fileName, out string filePath, out string? errorMsg);
 
         // Assumes that the current cursor position when called is the errorMessage position.
-        public static string PromptFilename(out string filePath, ValidateFileNameAndGetPath validateAndGetPath, PreValidationProcessing? preValidationProcessing = null, int maxLength = 255)
+        public static string PromptFilename(out string filePath, ValidateFileNameAndGetPath validateAndGetPath, PreValidationProcessing? preValidationProcessing = null, string prompt = DEFAULT_PROMPT, int maxLength = 255)
         {
             CursorState? errCursor = Cursor.State with { Colors = (ConsoleColor.Red, ConsoleColor.Black), IsVisible = false };
             Console.WriteLine();
@@ -286,14 +270,14 @@ namespace ConsoleAssignments
             string? errorMsg = null;
             do
             {
-                ClearRows(errCursor.Top, Cursor.Top); // Clears previous error AND input.
-                PrintError(errorMsg); // Prints errors from ValidateFileName
-                Console.Write(" > ");
+                ClearRows(errCursor.Top, Console.CursorTop); // (error AND input)
+                PrintError(errorMsg); // (error from validateAndGetPath)
+                var inputPos = Cursor.Position;
 
                 fileName = string.Empty;
-                foreach (var update in PromptAdvanced(charFilter: CharFilter.FileName, maxLength: maxLength)) // <- ReadKey inside
+                foreach (var update in PromptAdvanced(charFilter: CharFilter.FileName, prompt: prompt, maxLength: maxLength)) // <- ReadKey inside
                 {
-                    ClearRows(errCursor.Top, update.CursorPosition.Top - 1); // Clears previous error.
+                    ClearRows(errCursor.Top, inputPos.Top - 1); // (error only)
 
                     switch (update.Cause)
                     {
@@ -330,30 +314,6 @@ namespace ConsoleAssignments
                 Console.WriteLine(errorMsg);
                 colors.Apply();
                 Cursor.TrySetVisibility(true);
-            }
-        }
-
-        public static class TextEdit
-        {
-            public static CursorPosition Backspace(int padLeft = 0, int padRight = 0)
-            {
-                var pos = Cursor.MoveBackwards(padLeft, padRight);
-                Console.Write(' ');
-                return pos.Apply();
-            }
-
-            public static CursorPosition Write(char value, int padLeft = 0, int padRight = 0)
-            {
-                var pos = Cursor.Position.GetRelativeMove(1, padLeft, padRight);
-                Console.Write(value);
-                return pos.Apply();
-            }
-
-            public static CursorPosition Write(string value, int padLeft = 0, int padRight = 0) // extremely unoptimized
-            {
-                foreach (char c in value)
-                    Write(c, padLeft, padRight);
-                return Cursor.Position;
             }
         }
     }

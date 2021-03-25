@@ -17,7 +17,7 @@ namespace ConsoleAssignments.Assignments
             Console.WriteLine("(Enter an empty sting to cancel)");
             Console.WriteLine();
 
-            var text = ConsoleX.PromptRead("> ") ?? string.Empty;
+            var text = ConsoleX.PromptLine("> ") ?? string.Empty;
             if (text.Length == 0)
             {
                 Console.WriteLine("Your input was empty - cancelling.");
@@ -54,7 +54,7 @@ namespace ConsoleAssignments.Assignments
 
             Console.WriteLine();
             Console.Write("Do you want to open the file now to have a look at it? ");
-            if (ConsoleX.PromptYesNo(defaultValue: true))
+            if (ConsoleX.PromptYesNo(defaultValue: true) == true)
             {
                 Process p = new();
                 p.StartInfo = new ProcessStartInfo { UseShellExecute = true, FileName = filePath };
@@ -71,12 +71,12 @@ namespace ConsoleAssignments.Assignments
             }
             
             Console.WriteLine();
-            Console.Write("Do you want to keep the file on disk? ");
+            Console.Write("Do you want to keep the file on disk?");
             var inputPos = ConsoleX.Cursor.Position;
-            Console.WriteLine("\n(Hint: Keep it for testing A08)");
+            Console.WriteLine("\n(Recomended: Keep it for testing A08)");
             var outputPos = ConsoleX.Cursor.Position;
             inputPos.Apply();
-            bool keep = ConsoleX.PromptYesNo(defaultValue: true);
+            bool keep = ConsoleX.PromptYesNo(defaultValue: true) ?? true;
             outputPos.Apply();
             if (!keep)
             {
