@@ -52,17 +52,34 @@ namespace ConsoleAssignments
             Cursor.Position = (0, newTop);
         }
 
-        // supports cancel with ESC (that's why the number type is nullable: If (return: false AND number is null) then ESC cancel occurred)
-        public static bool TryReadNumber([NotNullWhen(true)] out int? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
-            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
-        public static bool TryReadNumber([NotNullWhen(true)] out float? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
-            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
-        public static bool TryReadNumber([NotNullWhen(true)] out decimal? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
-            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
-        public static bool TryReadNumber([NotNullWhen(true)] out double? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool allowEscCancel = false)
-            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt, allowEscCancel);
+        // supports cancel with ESC (that's why the number type is nullable: If (return: false && number is null) then ESC cancel occurred)
+        public static bool TryReadNumber([NotNullWhen(true)] out int? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt, true);
+        public static bool TryReadNumber([NotNullWhen(true)] out float? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt, true);
+        public static bool TryReadNumber([NotNullWhen(true)] out decimal? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt, true);
+        public static bool TryReadNumber([NotNullWhen(true)] out double? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt, true);
+        // overloads that does not support cancellation:
+        public static bool TryReadNumber(out int number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt);
+        public static bool TryReadNumber(out float number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt);
+        public static bool TryReadNumber(out decimal number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt);
+        public static bool TryReadNumber(out double number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
+            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt);
 
         private delegate bool TryParseFunc<T>(string? input, out T output) where T : notnull;
+
+        private static bool TryReadNumber<T>(TryParseFunc<T> tryParseFunc, out T number, ref string? errorMsg, string prompt) where T : struct
+        {
+            bool success = TryReadNumber(tryParseFunc, out T? numberNull, ref errorMsg, prompt, false);
+            number = numberNull ?? default;
+            return success;
+        }
+
         private static bool TryReadNumber<T>(TryParseFunc<T> tryParseFunc, [NotNullWhen(true)] out T? number, ref string? errorMsg, string prompt, bool allowEscCancel)
             where T : struct // could also constrain to: "notnull, new()"
         {

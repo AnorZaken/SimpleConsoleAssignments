@@ -29,12 +29,8 @@ namespace ConsoleAssignments.Assignments
 
             static bool TryReadAgeFunc(out int age, ref string? errorMsg, string prompt)
             {
-                if (!ConsoleX.TryReadNumber(out int? ageNull, ref errorMsg, prompt))
-                {
-                    age = 0;
+                if (!ConsoleX.TryReadNumber(out age, ref errorMsg, prompt))
                     return false;
-                }
-                age = ageNull.Value;
                 if (age >= 0)
                     return true;
                 errorMsg = $"Age cannot be negative ({age})!";

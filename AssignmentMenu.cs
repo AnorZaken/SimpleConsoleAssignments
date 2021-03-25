@@ -51,7 +51,7 @@ namespace ConsoleAssignments
             }
 
             index = -1;
-            if (ConsoleX.TryReadNumber(out int? number, ref errorMsg, prompt, allowEscCancel: true))
+            if (ConsoleX.TryReadNumber(out int? number, ref errorMsg, prompt))
             {
                 if (number == 0 /* Exit */ || TryFindAssignmentIndex(number.Value, out index))
                     return true;

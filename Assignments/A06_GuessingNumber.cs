@@ -27,25 +27,19 @@ namespace ConsoleAssignments.Assignments
             bool TryGuessFunc(out int guess, ref string? hintMsg, string prompt)
             {
                 ++attempts;
-                if (ConsoleX.TryReadNumber(out int? guessNull, ref hintMsg, prompt) == true)
+                if (!ConsoleX.TryReadNumber(out guess, ref hintMsg, prompt))
+                    return false;
+                
+                int diff = number - guess;
+                hintMsg = diff switch
                 {
-                    guess = guessNull.Value;
-                    int diff = number - guess;
-
-                    hintMsg = diff switch
-                    {
-                        0 => null,
-                        < -33 => $"The number {guess} is much too large.",
-                        > +33 => $"The number {guess} is much too small.",
-                        < 0 => $"The number {guess} is too large.",
-                        > 0 => $"The number {guess} is too small.",
-                    };
-
-                    if (diff == 0)
-                        return true;
-                }
-                guess = -1;
-                return false;
+                    0 => null,
+                    < -33 => $"The number {guess} is much too large.",
+                    > +33 => $"The number {guess} is much too small.",
+                    < 0 => $"The number {guess} is too large.",
+                    > 0 => $"The number {guess} is too small.",
+                };
+                return diff == 0;
             }
         }
 
