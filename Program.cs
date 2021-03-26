@@ -42,6 +42,7 @@ var assignments = new Assignment[]
     new A10_MultiplicationTable(),
     new A11_RandomAndSort(),
     new A12_Palindrome(),
+    new A13_Range(),
 };
 
 new AssignmentMenu(assignments).Run();

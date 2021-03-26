@@ -21,7 +21,7 @@ namespace ConsoleAssignments
         /// <summary>
         /// Aggregates a collection of strings into one big string.
         /// </summary>
-        public static string JoinText(this IEnumerable<string> strings, string separator = "")
+        public static string JoinText(this IEnumerable<string> strings, string separator = ", ")
             => string.Join(separator, strings);
 
         /// <summary>
@@ -39,8 +39,7 @@ namespace ConsoleAssignments
         /// </summary>
         public static string Reverse(this string text)
         {
-            return text.GraphemeClusters().Reverse().JoinText();
-                
+            return text.GraphemeClusters().Reverse().JoinText("");
         }
     }
 }
