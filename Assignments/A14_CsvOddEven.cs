@@ -7,10 +7,25 @@ namespace ConsoleAssignments.Assignments
     {
         protected override void Implementation()
         {
-            Console.Write("Please enter a few integers, comma separated:");
+            if (!AskForSomeCommaSeparatedIntegers(out var numbers, out _))
+                return;
+
+            Console.WriteLine();
+            Console.Write("The odd numbers are (in order): ");
+            Console.WriteLine(numbers.Where(IsOdd).Select(num => num.ToString()).JoinText(", "));
+            Console.Write("The even numbers are (in order): ");
+            Console.WriteLine(numbers.Where(IsEven).Select(num => num.ToString()).JoinText(", "));
+
+            bool IsOdd(int val) => (val & 1) == 1;
+            bool IsEven(int val) => (val & 1) == 0;
+        }
+
+        internal static bool AskForSomeCommaSeparatedIntegers(out int[] numbers, out string[] values, bool acceptMixedInput = true)
+        {
+            Console.WriteLine("Please enter a few integers, comma separated:");
             var input = ConsoleX.PromptLine();
-            var values = input?.Split(',', StringSplitOptions.TrimEntries);
-            var numbers =
+            values = input?.Split(',', StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+            numbers =
                 (
                     from val in values
                     let numNull = TryParse(val)
@@ -21,25 +36,21 @@ namespace ConsoleAssignments.Assignments
                 )
                 .ToArray();
 
+            Console.WriteLine();
             if (numbers.Length == 0)
             {
                 Console.WriteLine("You did not enter comma-separated numbers!");
-                return;
+                return false;
             }
-            if (numbers.Length < values?.Length)
+            if (numbers.Length < values.Length)
             {
                 Console.WriteLine("You have entered a mix of things... some of which are numbers.");
+                return acceptMixedInput;
             }
+            return true;
 
-            Console.WriteLine();
-            Console.Write("The odd numbers are (in order): ");
-            Console.WriteLine(numbers.Where(IsOdd).Select(num => num.ToString()).JoinText(", "));
-            Console.Write("The even numbers are (in order): ");
-            Console.WriteLine(numbers.Where(IsEven).Select(num => num.ToString()).JoinText(", "));
 
-            int? TryParse(string val) => int.TryParse(val, out int num) ? num : (int?)null;
-            bool IsOdd(int val) => (val & 1) == 1;
-            bool IsEven(int val) => (val & 1) == 0;
+            int? TryParse(string val) => int.TryParse(val, out int num) ? num : null;
         }
     }
 }

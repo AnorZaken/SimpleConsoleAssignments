@@ -44,6 +44,7 @@ var assignments = new Assignment[]
     new A12_Palindrome(),
     new A13_Range(),
     new A14_CsvOddEven(),
+    new A15_CsvSum(),
 };
 
 new AssignmentMenu(assignments).Run();
