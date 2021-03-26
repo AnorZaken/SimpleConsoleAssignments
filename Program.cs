@@ -43,6 +43,7 @@ var assignments = new Assignment[]
     new A11_RandomAndSort(),
     new A12_Palindrome(),
     new A13_Range(),
+    new A14_CsvOddEven(),
 };
 
 new AssignmentMenu(assignments).Run();

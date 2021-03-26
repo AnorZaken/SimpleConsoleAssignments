@@ -40,7 +40,7 @@ namespace ConsoleAssignments
                 Console.WriteLine($" - {a.Number:d2} : {a.Name} ");
 
             Console.WriteLine();
-            Console.WriteLine(" - 00 : Exit ");
+            Console.WriteLine(" - 00 : Exit (Esc)");
         }
 
         private bool TryReadIndexFunc(out int index, ref string? errorMsg, string prompt)
