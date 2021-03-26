@@ -39,6 +39,7 @@ var assignments = new Assignment[]
     new A07_SaveToDisk(),
     new A08_ReadFile(),
     new A09_MathPower(),
+    new A10_MultiplicationTable(),
 };
 
 new AssignmentMenu(assignments).Run();

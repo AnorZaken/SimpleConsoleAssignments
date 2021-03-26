@@ -52,9 +52,9 @@ namespace ConsoleAssignments
         }
 
         /// <summary>
-        /// Tries to not break words, like in most other GUI representations of text.
+        /// Performs word-wrapping while writing the <paramref name="text"/> to the console.
         /// </summary>
-        /// <remarks>Uses WindowWidth, not BufferWidth!</remarks>
+        /// <remarks>Note: Uses WindowWidth, not BufferWidth.</remarks>
         public static void WriteWords(string text, bool appendNewLine = true, int maxLines = -1, int padLeft = 0, int padRight = 0)
         {
             int lineWidth = Console.WindowWidth - padLeft - padRight;
