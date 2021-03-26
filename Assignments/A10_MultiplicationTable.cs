@@ -16,15 +16,15 @@ namespace ConsoleAssignments.Assignments
         private static IEnumerable<string> CreateMultiplicationTable(int rows, int columns)
         {
             long max = rows * (long)columns;
-            int padding = $"{(max):F0}".Length + 1; // the +1 is for the TAB character
+            int padding = $"{(max):F0}".Length;
 
             var multTable = Enumerable
                 .Repeat(Enumerable.Range(1, columns), rows)
                 .Select(
                     (range, rowIndex) => range
                     .Select(num => num * (rowIndex + 1))
-                    .Select(num => (num + "\t").PadLeft(padding, ' ')) // padding to right-align numbers
-                    .Aggregate((row, elem) => row + elem)
+                    .Select(num => num.ToString().PadLeft(padding, ' ')) // padding to right-align numbers
+                    .JoinText("\t")
                 );
 
             return multTable;
