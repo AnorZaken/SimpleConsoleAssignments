@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 namespace ConsoleAssignments
 {
@@ -11,6 +12,7 @@ namespace ConsoleAssignments
 
         public static string EmptyLine => new(' ', Console.BufferWidth);
 
+        public static void ClearRow() => ClearRow(Console.CursorTop);
         public static void ClearRow(int row)
         {
             var pos = Cursor.Position;
@@ -18,7 +20,6 @@ namespace ConsoleAssignments
             Console.Write(EmptyLine);
             pos.Apply();
         }
-
         public static void ClearRows(int firstRow, int lastRow) // both values are inclusive
         {
             var pos = Cursor.Position;
@@ -32,13 +33,11 @@ namespace ConsoleAssignments
             pos.Apply();
         }
 
-
         public static ConsoleKeyInfo PressAnyKey(string message = "Press any key...")
         {
             Console.Write(message);
             return Console.ReadKey(true);
         }
-
 
         public static void WriteDividerLine(char lineChar = '=', int emptyRowsAfter = 1) // Issue: Can cause horizontally View movement if View.Width < Buffer.Width
         {
@@ -52,41 +51,142 @@ namespace ConsoleAssignments
             Cursor.Position = (0, newTop);
         }
 
+        /// <summary>
+        /// Tries to not break words, like in most other GUI representations of text.
+        /// </summary>
+        /// <remarks>Uses WindowWidth, not BufferWidth!</remarks>
+        public static void WriteWords(string text, bool appendNewLine = true, int maxLines = -1, int padLeft = 0, int padRight = 0)
+        {
+            int lineWidth = Console.WindowWidth - padLeft - padRight;
+            if (lineWidth <= 0)
+                throw new ArgumentException("Width of the usable area is zero. (Too much padding!)");
+
+            if (maxLines == 0)
+                return;
+            if (maxLines < 0)
+                maxLines = int.MaxValue;
+
+            var pos = Cursor.Position;
+
+            int firstLineWidth = Console.WindowWidth - Console.CursorLeft - padRight;
+            if (firstLineWidth <= 0)
+            {
+                // we have started too far to the right (violating padRight) so we must first move to the next line:
+                pos = new(padLeft, Console.CursorTop + 1);
+                firstLineWidth = lineWidth;
+            }
+
+            int lineCount = 0;
+            foreach (var paragraph in BreakIntoParagraphs(text))
+            {
+                foreach (var row in BreakIntoRows(paragraph, firstLineWidth, lineWidth))
+                {
+                    pos.Apply();
+                    Console.Write(row);
+                    if (++lineCount >= maxLines)
+                        return; // <--
+                    pos = new(padLeft, Console.CursorTop + 1);
+                }
+                Console.WriteLine();
+            }
+            if (appendNewLine)
+                Console.WriteLine();
+
+            static IEnumerable<string> BreakIntoParagraphs(string text)
+            {
+                using (StringReader sr = new(text))
+                {
+                    string? para;
+                    while ((para = sr.ReadLine()) != null)
+                        yield return para;
+                }
+            }
+            static IEnumerable<string> BreakIntoRows(string text, int firstLineWidth, int lineWidth)//, int maxLines)
+            {
+                text = text.TrimEnd(); // trailing whitespace can cause some dumb results, so get rid of them!
+
+                //int lineCount = 1;
+                int startIndex = 0;
+                int endIndex = 0;
+
+                // handle first line differently, since it might start at a random position:
+                if (firstLineWidth < text.Length)
+                {
+                    endIndex = text.LastIndexOf(' ', firstLineWidth);
+                    yield return GetNextLine();
+                    UpdateIndexes();
+                }
+                // handle all full-widht lines:
+                while (/*lineCount <= maxLines &&*/ endIndex + lineWidth < text.Length) // only enters if the remaining text is > a full-width line!
+                {
+                    endIndex = text.LastIndexOf(' ', endIndex + lineWidth, lineWidth); // new_endIndex is found by searching backwards from (old_endIndex + lineWidrh)
+                    yield return GetNextLine();
+                    UpdateIndexes();
+                }
+                // handle last line (simplified non-full-width):
+                //if (lineCount <= maxLines)
+                {
+                    yield return text.Substring(startIndex);
+                }
+
+
+                string GetNextLine() // also makes sure indexes 
+                {
+                    int length = endIndex - startIndex;
+                    if (length <= 0)
+                    {
+                        // no space found on this line - just cut the text at lineWidth
+                        endIndex = startIndex + lineWidth;
+                        return text.Substring(startIndex, lineWidth);
+                    }
+                    return text.Substring(startIndex, length);
+                }
+
+                void UpdateIndexes()
+                {
+                    while (text[endIndex] == ' ') // skip / trim away whitespace
+                        ++endIndex;
+                    startIndex = endIndex;
+                }
+            }
+        }
+
         // supports cancel with ESC (that's why the number type is nullable: If (return: false && number is null) then ESC cancel occurred)
-        public static bool TryReadNumber([NotNullWhen(true)] out int? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt, true);
-        public static bool TryReadNumber([NotNullWhen(true)] out float? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt, true);
-        public static bool TryReadNumber([NotNullWhen(true)] out decimal? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt, true);
-        public static bool TryReadNumber([NotNullWhen(true)] out double? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt, true);
+        public static bool TryReadNumber([NotNullWhen(true)] out int? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt, suppressNewline, true);
+        public static bool TryReadNumber([NotNullWhen(true)] out float? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt, suppressNewline, true);
+        public static bool TryReadNumber([NotNullWhen(true)] out decimal? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt, suppressNewline, true);
+        public static bool TryReadNumber([NotNullWhen(true)] out double? number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt, suppressNewline, true);
         // overloads that does not support cancellation:
-        public static bool TryReadNumber(out int number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt);
-        public static bool TryReadNumber(out float number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt);
-        public static bool TryReadNumber(out decimal number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt);
-        public static bool TryReadNumber(out double number, ref string? errorMsg, string prompt = DEFAULT_PROMPT)
-            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt);
+        public static bool TryReadNumber(out int number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(int.TryParse, out number, ref errorMsg, prompt, suppressNewline);
+        public static bool TryReadNumber(out float number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(float.TryParse, out number, ref errorMsg, prompt, suppressNewline);
+        public static bool TryReadNumber(out decimal number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(decimal.TryParse, out number, ref errorMsg, prompt, suppressNewline);
+        public static bool TryReadNumber(out double number, ref string? errorMsg, string prompt = DEFAULT_PROMPT, bool suppressNewline = false)
+            => TryReadNumber(double.TryParse, out number, ref errorMsg, prompt, suppressNewline);
 
         private delegate bool TryParseFunc<T>(string? input, out T output) where T : notnull;
 
-        private static bool TryReadNumber<T>(TryParseFunc<T> tryParseFunc, out T number, ref string? errorMsg, string prompt) where T : struct
+        private static bool TryReadNumber<T>(TryParseFunc<T> tryParseFunc, out T number, ref string? errorMsg, string prompt, bool suppressNewline) where T : struct
         {
-            bool success = TryReadNumber(tryParseFunc, out T? numberNull, ref errorMsg, prompt, false);
+            bool success = TryReadNumber(tryParseFunc, out T? numberNull, ref errorMsg, prompt, suppressNewline, false);
             number = numberNull ?? default;
             return success;
         }
-
-        private static bool TryReadNumber<T>(TryParseFunc<T> tryParseFunc, [NotNullWhen(true)] out T? number, ref string? errorMsg, string prompt, bool allowEscCancel)
+        private static bool TryReadNumber<T>(TryParseFunc<T> tryParseFunc, [NotNullWhen(true)] out T? number, ref string? errorMsg, string prompt, bool suppressNewline, bool allowEscCancel)
             where T : struct // could also constrain to: "notnull, new()"
         {
             Console.Write(prompt);
             bool success = TryReadNumber(tryParseFunc, out number, out string? input, allowEscCancel);
             if (success == false && number != null)
                 errorMsg = $"Make sure the input is a number (\"{input.Truncate(12)}\")!";
+            if (!suppressNewline)
+                Console.WriteLine();
             return success;
 
             static bool TryReadNumber(TryParseFunc<T> tryParseFunc, [NotNullWhen(true)] out T? number, out string? input, bool allowEscCancel)
@@ -132,9 +232,31 @@ namespace ConsoleAssignments
         }
 
         public delegate bool TryReadFunc<T>(out T value, ref string? errorMsg, string prompt);
+        public delegate bool TryReadFunc2<T>(out T value, ref string? errorMsg, string prompt, bool suppressNewline);
 
-        // A wrapper around a TryReadFunc that handles errorMsg output, and allows specifying maxAttempts.
-        public static bool TryReadWithError<T>(TryReadFunc<T> tryReadFunc, out T value, string prompt = DEFAULT_PROMPT, int maxAttempts = 8)
+        /// <summary>
+        ///  A wrapper around a <see cref="TryReadFunc{T}"/> that handles its <c>errorMsg</c> output, and allows specifying <paramref name="maxAttempts"/>.
+        /// </summary>
+        /// <inheritdoc cref="TryReadManyAttempts{T}(TryReadFunc2{T}, out T, string, int, bool)"/>
+        public static bool TryReadManyAttempts<T>(TryReadFunc<T> tryReadFunc, out T value, string prompt = DEFAULT_PROMPT, int maxAttempts = 8, bool suppressNewline = false)
+        {
+            return TryReadManyAttempts(FuncWrapper, out value, prompt, maxAttempts, suppressNewline);
+
+            bool FuncWrapper(out T value, ref string? errorMsg, string prompt, bool suppressNewline)
+                => tryReadFunc(out value, ref errorMsg, prompt);
+        }
+
+        /// <summary>
+        ///  A wrapper around a <see cref="TryReadFunc2{T}"/> that handles its <c>errorMsg</c> output, and allows specifying <paramref name="maxAttempts"/>.
+        /// </summary>
+        /// <typeparam name="T">The type of value to try and parse user input as</typeparam>
+        /// <param name="tryReadFunc">A function that parses console input (a string) as <typeparamref name="T"/></param>
+        /// <param name="value">The parsed result (undefined if unsuccessful)</param>
+        /// <param name="prompt">A prompt string to print in front of the console cursor</param>
+        /// <param name="maxAttempts">Maximum number of input attempts before failure</param>
+        /// <param name="suppressNewline">Determines if the newline at the end of user input is suppressed or retained</param>
+        /// <returns>True if <paramref name="tryReadFunc"/> returns true in at most [<paramref name="maxAttempts"/>] user inputs; Otherwise false.</returns>
+        public static bool TryReadManyAttempts<T>(TryReadFunc2<T> tryReadFunc, out T value, string prompt = DEFAULT_PROMPT, int maxAttempts = 8, bool suppressNewline = false)
         {
             var errPos = Cursor.Position;
             string? errorMsg = null;
@@ -142,10 +264,12 @@ namespace ConsoleAssignments
             {
                 if (errorMsg != null)
                     Console.WriteLine(errorMsg);
-                if (tryReadFunc(out value, ref errorMsg, prompt))
+                if (tryReadFunc(out value, ref errorMsg, prompt, suppressNewline: true)) // perf-optimize suppressNewline handling: only needed on the final input...
                 {
                     if (errorMsg != null)
                         ClearRow(errPos.Top);
+                    if (!suppressNewline)
+                        Console.WriteLine(); // ... i.e. here! (see comment above)
                     return true; // <--
                 }
                 ClearRows(errPos.Top, Console.CursorTop);
@@ -154,15 +278,6 @@ namespace ConsoleAssignments
             while (--maxAttempts > 0);
 
             Console.WriteLine("Too many attempts!");
-            return false;
-        }
-
-        public static bool TryAsk<T>(string question, TryReadFunc<T> attemptFunc, out T value, string prompt = DEFAULT_PROMPT, int maxAttempts = 8)
-        {
-            Console.WriteLine(question);
-            if (TryReadWithError(attemptFunc, out value, prompt, maxAttempts))
-                return true;
-            //PressAnyKey();
             return false;
         }
 
@@ -201,6 +316,7 @@ namespace ConsoleAssignments
             }
             while (true);
 
+            [return: NotNullIfNotNull("value")]
             bool? PrintValue(bool? value)
             {
                 pos.Apply();

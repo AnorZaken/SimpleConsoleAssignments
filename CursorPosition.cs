@@ -25,7 +25,7 @@ namespace ConsoleAssignments
 
             int width = maxX - leftPadding;
             if (width <= 0)
-                throw new ArgumentException("Width of the text area is zero. (Too much padding!)");
+                throw new ArgumentException("Width of the usable area is zero. (Too much padding!)");
 
             int newX = leftPadding + (oldX + relativeMove).Mod(width);
             int newY = Top + (oldX + relativeMove) / width;
@@ -60,6 +60,12 @@ namespace ConsoleAssignments
             (applyNewPosition ? newPosition : oldPosition).Apply();
             return newPosition;
         }
+
+        // these can throw if out of bounds and used!
+        public CursorPosition Up1 => new(Left, Top - 1);
+        public CursorPosition Down1 => new(Left, Top + 1);
+        public CursorPosition Left1 => new(Left - 1, Top);
+        public CursorPosition Right1 => new(Left + 1, Top);
 
         public static implicit operator CursorPosition((int Left, int Top) tuple) => new(tuple.Left, tuple.Top);
     }

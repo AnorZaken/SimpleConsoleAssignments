@@ -38,13 +38,12 @@ namespace ConsoleAssignments.Assignments
             }
 
 
-            if (!ConsoleX.TryAsk("What is your first and last name?", TryReadNameFunc, out Names names))
+            Console.WriteLine("What is your first and last name?");
+            if (!ConsoleX.TryReadManyAttempts(TryReadNameFunc, out Names names))
                 return;
-            Console.WriteLine();
-            
-            if (!ConsoleX.TryAsk("What is your age in years?", TryReadAgeFunc, out int age))
+            Console.WriteLine("What is your age in years?");
+            if (!ConsoleX.TryReadManyAttempts(TryReadAgeFunc, out int age))
                 return;
-            Console.WriteLine();
 
             Console.WriteLine();
             Console.WriteLine(" This is your entered data:");

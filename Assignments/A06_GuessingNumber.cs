@@ -12,7 +12,7 @@ namespace ConsoleAssignments.Assignments
             int number = rng.Next(1, 101);
             int attempts = 0; // we are doing capture on this
             Console.WriteLine($"A random number between 1-100 has been generated. Can you guess it within {MAX_ATTEMPTS} attempts?");
-            ConsoleX.TryReadWithError(
+            ConsoleX.TryReadManyAttempts(
                 TryGuessFunc,
                 out int guess,
                 maxAttempts: MAX_ATTEMPTS

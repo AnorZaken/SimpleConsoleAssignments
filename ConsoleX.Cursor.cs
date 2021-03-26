@@ -63,6 +63,9 @@ namespace ConsoleAssignments
                 return pos.Apply();
             }
 
+            public static CursorPosition RowStart => new(0, Console.CursorTop);
+            public static CursorPosition RowEnd => new(Console.BufferWidth - 1, Console.CursorTop);
+
             //public static CursorPosition Write(string value, int padLeft = 0, int padRight = 0) // extremely unoptimized
             //{
             //    foreach (char c in value)

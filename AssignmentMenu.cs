@@ -16,7 +16,8 @@ namespace ConsoleAssignments
                 Console.Clear();
                 WriteHeader();
                 WriteAssignments();
-                ConsoleX.TryAsk("Select assignment(enter number):", TryReadIndexFunc, out int index);
+                Console.WriteLine("Select assignment(enter number)");
+                ConsoleX.TryReadManyAttempts(TryReadIndexFunc, out int index);
                 
                 if (index == -1) 
                     break; // Exit
@@ -44,12 +45,6 @@ namespace ConsoleAssignments
 
         private bool TryReadIndexFunc(out int index, ref string? errorMsg, string prompt)
         {
-            bool TryFindAssignmentIndex(int assignmentNumber, out int index)
-            {
-                index = Array.FindIndex(assignments, a => a.Number == assignmentNumber);
-                return index != -1;
-            }
-
             index = -1;
             if (ConsoleX.TryReadNumber(out int? number, ref errorMsg, prompt))
             {
@@ -59,6 +54,12 @@ namespace ConsoleAssignments
                 return false;
             }
             return number is null;
+
+            bool TryFindAssignmentIndex(int assignmentNumber, out int index)
+            {
+                index = Array.FindIndex(assignments, a => a.Number == assignmentNumber);
+                return index != -1;
+            }
         }
     }
 }

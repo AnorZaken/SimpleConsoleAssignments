@@ -3,20 +3,14 @@
 using ConsoleAssignments;
 using ConsoleAssignments.Assignments;
 
+/* - Playing around with console scrolling - */
 //using System;
-//// PLAYING AROUND: console scrolling...
-//for (int i = 0; i < 100; ++i)
-//    Console.WriteLine(i);
-
-//Console.WriteLine();
-//Console.WriteLine();
-
 //while (true)
 //{
 //    var pos = ConsoleX.Cursor.Position;
 //    Console.Write($"Coords: {Console.GetCursorPosition()}");
 //    pos.Apply();
-//    switch (Console.ReadKey(true).Key)
+//    switch (Console.ReadKey(true).Key) // (not checking bounds on any of these!)
 //    {
 //        case ConsoleKey.UpArrow:
 //            --Console.CursorTop;
@@ -44,6 +38,7 @@ var assignments = new Assignment[]
     new A06_GuessingNumber(),
     new A07_SaveToDisk(),
     new A08_ReadFile(),
+    new A09_MathPower(),
 };
 
 new AssignmentMenu(assignments).Run();
