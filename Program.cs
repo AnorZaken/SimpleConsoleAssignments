@@ -40,6 +40,7 @@ var assignments = new Assignment[]
     new A08_ReadFile(),
     new A09_MathPower(),
     new A10_MultiplicationTable(),
+    new A11_RandomAndSort(),
 };
 
 new AssignmentMenu(assignments).Run();
